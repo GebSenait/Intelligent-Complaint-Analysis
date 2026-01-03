@@ -201,7 +201,6 @@ After completing Task 1:
 1. **Task 2**: Generate embeddings for cleaned narratives
 2. **Task 3**: Implement RAG retrieval pipeline
 3. **Task 4**: Build query interface and evaluation framework
-4. **Task 5**: Model training and performance tracking
 
 ---
 
