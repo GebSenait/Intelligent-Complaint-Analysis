@@ -2,7 +2,7 @@
 
 **Client:** CrediTrust Financial  
 **Project:** RAG-Powered Complaint Analysis System  
-**Status:** Task 1 - EDA and Preprocessing (In Progress)
+**Status:** Task 2 - Text Chunking, Embeddings & Vector Indexing (In Progress)
 
 ---
 
@@ -46,7 +46,8 @@ Intelligent-Complaint-Analysis/
 ├── notebooks/
 │   ├── __init__.py
 │   ├── README.md                        # Notebooks documentation
-│   └── task-1-eda-preprocessing.ipynb  # Task 1: EDA and preprocessing
+│   ├── task-1-eda-preprocessing.ipynb  # Task 1: EDA and preprocessing
+│   └── task-2-embeddings-vectorstore.ipynb  # Task 2: Embeddings & vector indexing
 ├── src/
 │   └── __init__.py                      # Source code (Tasks 2-5)
 ├── tests/
@@ -71,6 +72,16 @@ Intelligent-Complaint-Analysis/
 - **`tests/`**: Unit tests, integration tests, and test utilities
 - **`docs/`**: Project documentation, summaries, and reports
 - **`app.py`**: User interface for querying the RAG system (Gradio/Streamlit)
+
+---
+
+## Table of Contents
+
+- [Task 1 – EDA and Data Preprocessing](#task-1-eda-and-data-preprocessing)
+- [Task 2 – Text Chunking, Embeddings & Vector Indexing](#task-2-text-chunking-embeddings--vector-indexing)
+- [Task 3 – RAG Pipeline Implementation](#task-3-rag-pipeline-implementation)
+- [Setup Instructions](#setup-instructions)
+- [Usage](#usage)
 
 ---
 
@@ -100,6 +111,71 @@ Perform comprehensive Exploratory Data Analysis (EDA) and preprocessing on the C
 - **Cleaned Dataset**: `data/filtered_complaints.csv`
 - **EDA Notebook**: `notebooks/task-1-eda-preprocessing.ipynb`
 - **Summary Document**: `docs/eda-summary.md`
+
+---
+
+## Task 2: Text Chunking, Embeddings & Vector Indexing
+
+### Objective
+
+Convert cleaned complaint narratives into a production-ready semantic search index, enabling fast semantic retrieval for Product, Support, and Compliance teams.
+
+### Approach Summary
+
+**Sampling Strategy**: Stratified sampling of 12,000 complaints (within 10K-15K target range) with proportional representation across all four product categories (Credit Cards, Personal Loans, Savings Accounts, Money Transfers).
+
+**Chunking Choice**: RecursiveCharacterTextSplitter with `chunk_size=500` characters and `chunk_overlap=50` characters. This preserves semantic coherence while ensuring most complaint narratives remain as single chunks (only narratives >500 characters are split).
+
+**Embedding Model**: sentence-transformers/all-MiniLM-L6-v2 (384-dimensional vectors). Selected for optimal balance between speed (3-5x faster than larger models) and semantic quality for short-to-medium complaint narratives.
+
+### Results
+
+- **Dataset Size**: 12,000 complaints sampled with proportional category representation
+- **Number of Chunks**: ~12,000-13,000 chunks (most complaints remain single chunks)
+- **Vector Store Type**: FAISS IndexFlatIP (Inner Product) with normalized embeddings for cosine similarity search
+- **Embedding Dimension**: 384 dimensions
+
+### Key Findings & Insights
+
+**Impact on Retrieval Readiness**:
+- Chunking strategy preserves narrative integrity—most complaints remain as single, coherent chunks
+- Metadata preservation ensures full traceability from retrieved chunks back to original complaints
+- FAISS index enables sub-100ms similarity search for real-time RAG retrieval
+
+**Observations Useful for Task 3 (RAG)**:
+- Product category metadata enables filtered retrieval (e.g., search only within Credit Cards)
+- Complaint ID and date metadata support temporal and provenance tracking
+- Normalized embeddings optimize for cosine similarity, matching semantic intent well
+- Chunk overlap ensures continuity for split narratives while maintaining context
+
+### Outputs
+
+- **Vector Store**: `vector_store/complaint_embeddings.index` (FAISS index)
+- **Metadata**: `vector_store/chunk_metadata.pkl` (chunks + metadata)
+- **Summary**: `vector_store/sampling_summary.json` (sampling statistics)
+- **Notebook**: `notebooks/task-2-embeddings-vectorstore.ipynb`
+
+---
+
+## Task 3: RAG Pipeline Implementation
+
+### Purpose
+
+Build a Retrieval-Augmented Generation (RAG) pipeline and interactive chatbot that enables internal teams to query complaint data using natural language. The system retrieves semantically relevant complaint narratives and generates concise, evidence-backed insights.
+
+### What Task 2 Enables
+
+Task 2's vector store and embeddings provide:
+- **Semantic Search Foundation**: FAISS index enables fast retrieval of relevant complaint chunks
+- **Metadata Filtering**: Product category, date, and complaint ID metadata support filtered queries
+- **Traceability**: Complete metadata chain from query → chunk → original complaint
+- **Scalability**: Efficient indexing supports real-time queries for interactive chatbot use
+
+The RAG pipeline will leverage this vector store to:
+1. Accept natural language queries from users
+2. Retrieve top-K semantically similar complaint chunks
+3. Generate contextual responses using retrieved chunks as context
+4. Provide source attribution via metadata
 
 ---
 
@@ -196,11 +272,11 @@ All preprocessing decisions are explicitly linked to RAG performance:
 
 ## Next Steps
 
-After completing Task 1:
+After completing Task 2:
 
-1. **Task 2**: Generate embeddings for cleaned narratives
-2. **Task 3**: Implement RAG retrieval pipeline
-3. **Task 4**: Build query interface and evaluation framework
+1. **Task 3**: Implement RAG retrieval pipeline and chatbot interface
+2. **Task 4**: Build query interface and evaluation framework
+3. **Task 5**: Model training and tracking
 
 ---
 
