@@ -1,0 +1,4 @@
+# This file ensures the vector_store directory is tracked by git
+# Vector database files (FAISS/ChromaDB indices) will be stored here
+# Large vector store files are excluded via .gitignore
+
