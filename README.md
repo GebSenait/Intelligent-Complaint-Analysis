@@ -2,7 +2,7 @@
 
 **Client:** CrediTrust Financial  
 **Project:** RAG-Powered Complaint Analysis System  
-**Status:** Task 2 - Text Chunking, Embeddings & Vector Indexing (In Progress)
+**Status:** Task 3 - RAG Pipeline & Evaluation (Completed)
 
 ---
 
@@ -49,11 +49,19 @@ Intelligent-Complaint-Analysis/
 │   ├── task-1-eda-preprocessing.ipynb  # Task 1: EDA and preprocessing
 │   └── task-2-embeddings-vectorstore.ipynb  # Task 2: Embeddings & vector indexing
 ├── src/
-│   └── __init__.py                      # Source code (Tasks 2-5)
+│   ├── __init__.py                      # Source code (Tasks 2-5)
+│   ├── vector_store_loader.py          # Task 3: Vector store loader
+│   ├── retriever.py                     # Task 3: Semantic retriever
+│   ├── prompt_template.py               # Task 3: Prompt engineering
+│   ├── generator.py                     # Task 3: LLM generator
+│   ├── rag_pipeline.py                  # Task 3: RAG orchestrator
+│   ├── evaluation.py                    # Task 3: Evaluation framework
+│   └── run_evaluation.py                # Task 3: Evaluation script
 ├── tests/
 │   └── __init__.py                      # Unit and integration tests
 ├── docs/
-│   └── eda-summary.md                   # EDA findings and recommendations
+│   ├── eda-summary.md                   # EDA findings and recommendations
+│   └── task-3-evaluation-results.md    # Task 3: RAG evaluation results
 ├── app.py                                # Gradio/Streamlit interface (Task 4)
 ├── requirements.txt                     # Python dependencies
 ├── README.md                            # This file
@@ -79,7 +87,7 @@ Intelligent-Complaint-Analysis/
 
 - [Task 1 – EDA and Data Preprocessing](#task-1-eda-and-data-preprocessing)
 - [Task 2 – Text Chunking, Embeddings & Vector Indexing](#task-2-text-chunking-embeddings--vector-indexing)
-- [Task 3 – RAG Pipeline Implementation](#task-3-rag-pipeline-implementation)
+- [Task 3 – RAG Pipeline & Evaluation](#task-3-rag-pipeline--evaluation)
 - [Setup Instructions](#setup-instructions)
 - [Usage](#usage)
 
@@ -157,25 +165,109 @@ Convert cleaned complaint narratives into a production-ready semantic search ind
 
 ---
 
-## Task 3: RAG Pipeline Implementation
+## Task 3: RAG Pipeline & Evaluation
 
-### Purpose
+### Objective
 
-Build a Retrieval-Augmented Generation (RAG) pipeline and interactive chatbot that enables internal teams to query complaint data using natural language. The system retrieves semantically relevant complaint narratives and generates concise, evidence-backed insights.
+Build a production-ready Retrieval-Augmented Generation (RAG) pipeline that enables CrediTrust teams to query complaint data using natural language. The system retrieves semantically relevant complaint narratives and generates concise, evidence-backed insights while avoiding hallucinations.
 
-### What Task 2 Enables
+### Architecture Overview
 
-Task 2's vector store and embeddings provide:
-- **Semantic Search Foundation**: FAISS index enables fast retrieval of relevant complaint chunks
-- **Metadata Filtering**: Product category, date, and complaint ID metadata support filtered queries
-- **Traceability**: Complete metadata chain from query → chunk → original complaint
-- **Scalability**: Efficient indexing supports real-time queries for interactive chatbot use
+The RAG pipeline follows a **Retriever → Generator** architecture:
 
-The RAG pipeline will leverage this vector store to:
-1. Accept natural language queries from users
-2. Retrieve top-K semantically similar complaint chunks
-3. Generate contextual responses using retrieved chunks as context
-4. Provide source attribution via metadata
+1. **Vector Store Loader** (`src/vector_store_loader.py`): Loads pre-built FAISS index and metadata from Task 2
+2. **Retriever** (`src/retriever.py`): Embeds user queries using all-MiniLM-L6-v2 and retrieves top-k relevant chunks via FAISS similarity search
+3. **Prompt Template** (`src/prompt_template.py`): Designs prompts positioning the LLM as a CrediTrust financial analyst with explicit instructions to use only retrieved context
+4. **Generator** (`src/generator.py`): Generates answers using LLM (HuggingFace transformers) with retrieved context
+5. **RAG Pipeline** (`src/rag_pipeline.py`): Orchestrates the complete flow from query to answer
+
+### Implementation Details
+
+**Retriever Logic**:
+- Query embedding using sentence-transformers/all-MiniLM-L6-v2 (384-dimensional)
+- FAISS IndexFlatIP search with normalized embeddings for cosine similarity
+- Default top-k=5 chunks per query
+- Optional product category filtering for multi-product analysis
+- Full metadata preservation (complaint_id, product_category, issue, date_received)
+
+**Prompt & Generator Design**:
+- System role: Positions LLM as CrediTrust senior financial analyst
+- Context formatting: Structured complaint evidence with metadata (ID, product, issue, date, relevance score)
+- Explicit instructions: Use ONLY provided evidence, avoid guessing, state when context is insufficient
+- Generator: HuggingFace transformers pipeline (configurable model, defaults to GPT-2 with fallback)
+
+**Evaluation Approach**:
+- 10 representative business questions covering:
+  - Product Analysis (Credit Cards, Personal Loans, Savings Accounts, Money Transfers)
+  - Operational (Money transfer delays)
+  - Security & Compliance (Fraud, unauthorized transactions)
+  - Service Quality (Customer service)
+  - Financial (Billing, fees)
+  - Technical (Account access, login)
+  - Process (Loan approval processes)
+- Qualitative evaluation with manual quality scoring (1-5 scale)
+- Evaluation script: `src/run_evaluation.py`
+- Output: Markdown table and JSON results in `docs/task-3-evaluation-results.md`
+
+### Results Summary
+
+**What Worked Well**:
+- Retrieval system successfully finds semantically relevant complaints for diverse business questions
+- Metadata preservation enables full traceability from answer to source complaints
+- Prompt template effectively constrains LLM to use only retrieved evidence
+- Product category filtering supports targeted multi-product analysis
+- Pipeline architecture is modular and extensible for production use
+
+**Failure Patterns**:
+- Limited context: When retrieved chunks don't contain sufficient information, generator correctly states insufficiency (by design)
+- Model limitations: Default GPT-2 model provides basic generation; production should use instruction-tuned models (e.g., flan-t5-base, DialoGPT-medium)
+- Retrieval quality: Some queries may retrieve chunks with lower semantic relevance; can be improved with query expansion or re-ranking
+
+**Key Insights**:
+
+*Retrieval Quality*:
+- FAISS similarity search effectively matches user intent to complaint narratives
+- Top-k=5 provides good balance between context richness and noise reduction
+- Product category filtering enables precise domain-specific queries
+- Similarity scores (cosine similarity) correlate well with relevance
+
+*Prompt Effectiveness*:
+- Explicit "use only provided context" instruction reduces hallucinations
+- Structured context formatting (with metadata) helps LLM understand source credibility
+- Financial analyst role positioning improves answer tone and business focus
+
+*Readiness for UI (Task 4)*:
+- Pipeline API (`RAGPipeline.query()`) is ready for integration
+- Response format includes answer, retrieved chunks, and metadata for source attribution
+- Error handling and fallback mechanisms in place
+- Evaluation framework provides baseline for continuous improvement
+
+### Outputs
+
+- **RAG Pipeline Modules**: `src/vector_store_loader.py`, `src/retriever.py`, `src/prompt_template.py`, `src/generator.py`, `src/rag_pipeline.py`
+- **Evaluation Module**: `src/evaluation.py`, `src/run_evaluation.py`
+- **Evaluation Results**: `docs/task-3-evaluation-results.md` (Markdown table with questions, answers, sources, scores)
+- **JSON Results**: `docs/task-3-evaluation-results.json` (Structured evaluation data)
+
+### Usage
+
+```python
+from src.rag_pipeline import RAGPipeline
+
+# Initialize pipeline
+pipeline = RAGPipeline(top_k=5)
+
+# Query the system
+result = pipeline.query("What are the most common issues with Credit Cards?")
+
+print(result['answer'])
+print(f"Retrieved {len(result['retrieved_chunks'])} relevant complaints")
+```
+
+Run evaluation:
+```bash
+python src/run_evaluation.py
+```
 
 ---
 
@@ -272,11 +364,10 @@ All preprocessing decisions are explicitly linked to RAG performance:
 
 ## Next Steps
 
-After completing Task 2:
+After completing Task 3:
 
-1. **Task 3**: Implement RAG retrieval pipeline and chatbot interface
-2. **Task 4**: Build query interface and evaluation framework
-3. **Task 5**: Model training and tracking
+1. **Task 4**: Build query interface (Gradio/Streamlit) and production evaluation framework
+2. **Task 5**: Model training and tracking
 
 ---
 
